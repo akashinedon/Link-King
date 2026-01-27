@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String    @id // Clerk User ID
+  email         String    @unique
+  name          String?
+  username      String?   @unique
+  bio           String?   @db.Text
+  avatar        String?
+  theme         String    @default("default")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  links     Link[]
+  pageViews PageView[]
+
+  @@index([username])
+  @@index([email])
+}
+
+model Link {
+  id        String   @id @default(cuid())
+  title     String
+  url       String
+  icon      String?
+  order     Int
+  isActive  Boolean  @default(true)
+  clicks    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  clickEvents Click[]
+
+  @@index([userId, order])
+  @@index([userId])
+}
+
+model Click {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userAgent String?
+  referer   String?
+  country   String?
+
+  linkId String
+  link   Link   @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@index([linkId, createdAt])
+  @@index([linkId])
+}
+
+model PageView {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userAgent String?
+  referer   String?
+  country   String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId])
+}
