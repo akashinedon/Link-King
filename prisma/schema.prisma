@@ -9,15 +9,15 @@ datasource db {
 }
 
 model User {
-  id            String    @id // Clerk User ID
-  email         String    @unique
-  name          String?
-  username      String?   @unique
-  bio           String?   @db.Text
-  avatar        String?
-  theme         String    @default("default")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id        String   @id // Clerk User ID
+  email     String   @unique
+  name      String?
+  username  String?  @unique
+  bio       String?  @db.Text
+  avatar    String?
+  theme     String   @default("default")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   links     Link[]
   pageViews PageView[]
@@ -27,18 +27,19 @@ model User {
 }
 
 model Link {
-  id        String   @id @default(cuid())
-  title     String
-  url       String
-  icon      String?
-  order     Int
-  isActive  Boolean  @default(true)
-  clicks    Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  title      String
+  url        String
+  icon       String?
+  order      Int
+  isActive   Boolean  @default(true)
+  isFeatured Boolean  @default(false)
+  clicks     Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   userId String
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   clickEvents Click[]
 

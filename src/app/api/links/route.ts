@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
 import { prisma } from '@/lib/prisma';
+import { linkCreateSchema, linksReorderSchema, firstZodError } from '@/lib/validations';
 
 export async function GET() {
     try {
@@ -29,11 +30,13 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { title, url, icon } = body;
+        const parsed = linkCreateSchema.safeParse(body);
 
-        if (!title || !url) {
-            return new NextResponse("Missing required fields", { status: 400 });
+        if (!parsed.success) {
+            return new NextResponse(firstZodError(parsed.error), { status: 400 });
         }
+
+        const { title, url, icon } = parsed.data;
 
         // Get last order to append to the end
         const lastLink = await prisma.link.findFirst({
@@ -69,16 +72,18 @@ export async function PATCH(req: Request) {
         }
 
         const body = await req.json();
-        const { links } = body;
+        const parsed = linksReorderSchema.safeParse(body);
 
-        if (!links || !Array.isArray(links)) {
-            return new NextResponse("Invalid data", { status: 400 });
+        if (!parsed.success) {
+            return new NextResponse(firstZodError(parsed.error), { status: 400 });
         }
+
+        const { links } = parsed.data;
 
         // Update order for each link
         // Use Promise.all for parallel execution, but verify ownership
         await Promise.all(
-            links.map((item: { id: string; order: number }) =>
+            links.map((item) =>
                 prisma.link.updateMany({
                     where: {
                         id: item.id,

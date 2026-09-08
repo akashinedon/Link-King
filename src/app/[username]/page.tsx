@@ -7,6 +7,9 @@ import { Link2 } from 'lucide-react';
 import LinkButton from '@/components/link-button';
 import ProfileLinks from '@/components/public-profile/profile-links';
 import PromoFooter from '@/components/public-profile/promo-footer';
+import ShareButton from '@/components/public-profile/share-button';
+import { getClientIp, isRateLimited } from '@/lib/rate-limit';
+import { getCountryFromHeaders } from '@/lib/geo';
 
 interface Props {
     params: { username: string };
@@ -38,7 +41,7 @@ export default async function ProfilePage({ params }: Props) {
         include: {
             links: {
                 where: { isActive: true },
-                orderBy: { order: 'asc' },
+                orderBy: [{ isFeatured: 'desc' }, { order: 'asc' }],
             },
         },
     });
@@ -51,14 +54,21 @@ export default async function ProfilePage({ params }: Props) {
     const headersList = headers();
     const userAgent = headersList.get('user-agent') || null;
     const referer = headersList.get('referer') || null;
+    const country = getCountryFromHeaders(headersList);
 
-    await prisma.pageView.create({
-        data: {
-            userId: user.id,
-            userAgent,
-            referer,
-        },
-    });
+    // Public page, hit on every load (including bots/refreshes) - throttle per
+    // IP+profile so a handful of reloads doesn't inflate the view count.
+    const ip = getClientIp(headersList);
+    if (!isRateLimited(`view:${ip}:${user.id}`, 1, 60_000)) {
+        await prisma.pageView.create({
+            data: {
+                userId: user.id,
+                userAgent,
+                referer,
+                country,
+            },
+        });
+    }
 
     const themeClass = `theme-${user.theme || 'default'}`;
 
@@ -101,6 +111,13 @@ export default async function ProfilePage({ params }: Props) {
                             {user.bio}
                         </p>
                     )}
+
+                    <div className="mt-4 flex justify-center">
+                        <ShareButton
+                            title={`${user.name || user.username} | MiniLink`}
+                            text={user.bio || `Check out ${user.name || user.username}'s links`}
+                        />
+                    </div>
                 </div>
 
                 {/* Links */}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs';
 import { prisma } from '@/lib/prisma';
+import { linkUpdateSchema, firstZodError } from '@/lib/validations';
 
 export async function PUT(
     req: Request,
@@ -13,6 +14,14 @@ export async function PUT(
         }
 
         const body = await req.json();
+        // Only whitelisted fields make it into `data` below - this used to be
+        // a raw `...body` spread, which let a crafted request overwrite
+        // clicks/order/userId on someone's link.
+        const parsed = linkUpdateSchema.safeParse(body);
+
+        if (!parsed.success) {
+            return new NextResponse(firstZodError(parsed.error), { status: 400 });
+        }
 
         // Ensure the link exists and belongs to the user
         // Using updateMany is a safe way to ensure ownership without an extra fetch
@@ -31,9 +40,7 @@ export async function PUT(
             where: {
                 id: params.id,
             },
-            data: {
-                ...body,
-            },
+            data: parsed.data,
         });
 
         return NextResponse.json(link);

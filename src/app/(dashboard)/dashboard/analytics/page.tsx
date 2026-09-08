@@ -2,17 +2,42 @@ import { auth } from '@clerk/nextjs';
 import { prisma } from '@/lib/prisma';
 import { Eye, MousePointer, TrendingUp, BarChart3 } from 'lucide-react';
 import AnalyticsCharts from '@/components/dashboard/analytics-charts';
+import AnalyticsRangeTabs from '@/components/dashboard/analytics-range-tabs';
+import { DeviceBreakdownChart, HorizontalBarBreakdownChart, type BreakdownItem } from '@/components/dashboard/breakdown-charts';
+import { parseDevice } from '@/lib/device';
+import { parseReferrer } from '@/lib/referrer';
 
-export default async function AnalyticsPage() {
+const VALID_RANGES = ['7', '30', '90'] as const;
+
+/** Counts occurrences per bucket and returns the top N as chart-ready items. */
+function topBreakdown(values: (string | null)[], limit = 6): BreakdownItem[] {
+    const counts = new Map<string, number>();
+    for (const value of values) {
+        const key = value || 'Unknown';
+        counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    return Array.from(counts.entries())
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, limit);
+}
+
+interface Props {
+    searchParams: { range?: string };
+}
+
+export default async function AnalyticsPage({ searchParams }: Props) {
     const { userId } = auth();
 
     if (!userId) {
         return null;
     }
 
-    // Get last 30 days of data
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const range = VALID_RANGES.includes(searchParams.range as any) ? searchParams.range! : '30';
+    const days = parseInt(range, 10);
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
 
     const [
         totalViews,
@@ -36,17 +61,17 @@ export default async function AnalyticsPage() {
         prisma.pageView.findMany({
             where: {
                 userId: userId,
-                createdAt: { gte: thirtyDaysAgo },
+                createdAt: { gte: startDate },
             },
-            select: { createdAt: true },
+            select: { createdAt: true, country: true, referer: true },
             orderBy: { createdAt: 'asc' },
         }),
         prisma.click.findMany({
             where: {
                 link: { userId: userId },
-                createdAt: { gte: thirtyDaysAgo },
+                createdAt: { gte: startDate },
             },
-            select: { createdAt: true },
+            select: { createdAt: true, userAgent: true },
             orderBy: { createdAt: 'asc' },
         }),
     ]);
@@ -54,8 +79,8 @@ export default async function AnalyticsPage() {
     // Aggregate data by day
     const dayData: Record<string, { views: number; clicks: number }> = {};
 
-    // Initialize last 30 days
-    for (let i = 0; i < 30; i++) {
+    // Initialize the selected range
+    for (let i = 0; i < days; i++) {
         const date = new Date();
         date.setDate(date.getDate() - i);
         const key = date.toISOString().split('T')[0];
@@ -86,6 +111,12 @@ export default async function AnalyticsPage() {
             clicks: data.clicks,
         }))
         .sort((a, b) => a.date.localeCompare(b.date));
+
+    // Turn the previously write-only userAgent/referer/country columns into
+    // actual breakdown charts.
+    const deviceBreakdown = topBreakdown(recentClicks.map((c) => parseDevice(c.userAgent)));
+    const referrerBreakdown = topBreakdown(recentPageViews.map((v) => parseReferrer(v.referer)));
+    const countryBreakdown = topBreakdown(recentPageViews.map((v) => v.country));
 
     const stats = [
         {
@@ -120,13 +151,16 @@ export default async function AnalyticsPage() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="mb-8">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    Analytics
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-                    Track your profile performance over the last 30 days
-                </p>
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                        Analytics
+                    </h1>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                        Track your profile performance over the last {days} days
+                    </p>
+                </div>
+                <AnalyticsRangeTabs active={range} />
             </div>
 
             {/* Stats Grid */}
@@ -153,6 +187,22 @@ export default async function AnalyticsPage() {
             <div className="card p-6 mb-8">
                 <h2 className="text-lg font-semibold mb-4">Views & Clicks Over Time</h2>
                 <AnalyticsCharts data={chartData} />
+            </div>
+
+            {/* Breakdowns */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+                <div className="card p-6">
+                    <h2 className="text-lg font-semibold mb-4">Devices</h2>
+                    <DeviceBreakdownChart data={deviceBreakdown} />
+                </div>
+                <div className="card p-6">
+                    <h2 className="text-lg font-semibold mb-4">Top Traffic Sources</h2>
+                    <HorizontalBarBreakdownChart data={referrerBreakdown} />
+                </div>
+                <div className="card p-6">
+                    <h2 className="text-lg font-semibold mb-4">Top Countries</h2>
+                    <HorizontalBarBreakdownChart data={countryBreakdown} />
+                </div>
             </div>
 
             {/* Top Links */}

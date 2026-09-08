@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs';
 import { prisma } from '@/lib/prisma';
+import { profileUpdateSchema, firstZodError } from '@/lib/validations';
 
 // GET user profile
 export async function GET() {
@@ -71,7 +72,13 @@ export async function PUT(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { name, bio, avatar, theme, username } = await request.json();
+        const parsed = profileUpdateSchema.safeParse(await request.json());
+
+        if (!parsed.success) {
+            return NextResponse.json({ error: firstZodError(parsed.error) }, { status: 400 });
+        }
+
+        const { name, bio, avatar, theme, username } = parsed.data;
 
         // If username is being changed, check uniqueness
         if (username) {

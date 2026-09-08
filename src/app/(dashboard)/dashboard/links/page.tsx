@@ -11,7 +11,8 @@ import {
     EyeOff,
     Edit3,
     Check,
-    X
+    X,
+    Star
 } from 'lucide-react';
 import {
     DndContext,
@@ -31,6 +32,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import IconPicker, { getIconComponent } from '@/components/dashboard/icon-picker';
+import { detectPlatformFromUrl } from '@/lib/platform-icon';
 
 interface Link {
     id: string;
@@ -39,6 +41,7 @@ interface Link {
     icon: string | null;
     order: number;
     isActive: boolean;
+    isFeatured: boolean;
     clicks: number;
 }
 
@@ -118,6 +121,21 @@ export default function LinksPage() {
             ));
         } catch (error) {
             console.error('Failed to toggle link:', error);
+        }
+    };
+
+    const handleToggleFeatured = async (id: string, isFeatured: boolean) => {
+        try {
+            await fetch(`/api/links/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isFeatured }),
+            });
+            setLinks(links.map(link =>
+                link.id === id ? { ...link, isFeatured } : link
+            ));
+        } catch (error) {
+            console.error('Failed to toggle featured link:', error);
         }
     };
 
@@ -201,7 +219,17 @@ export default function LinksPage() {
                                     className="input-field"
                                     placeholder="https://example.com"
                                     value={newLink.url}
-                                    onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
+                                    onChange={(e) => {
+                                        const url = e.target.value;
+                                        // Auto-pick a matching platform icon as the user
+                                        // pastes a URL, but never override a manual choice.
+                                        const detected = !newLink.icon ? detectPlatformFromUrl(url) : null;
+                                        setNewLink({
+                                            ...newLink,
+                                            url,
+                                            ...(detected && { icon: detected }),
+                                        });
+                                    }}
                                     required
                                 />
                             </div>
@@ -263,6 +291,7 @@ export default function LinksPage() {
                                     link={link}
                                     onDelete={handleDeleteLink}
                                     onToggle={handleToggleActive}
+                                    onToggleFeatured={handleToggleFeatured}
                                     onUpdate={(updatedLink) => {
                                         setLinks(links.map(l => l.id === updatedLink.id ? updatedLink : l));
                                     }}
@@ -282,10 +311,11 @@ interface SortableLinkItemProps {
     link: Link;
     onDelete: (id: string) => void;
     onToggle: (id: string, isActive: boolean) => void;
+    onToggleFeatured: (id: string, isFeatured: boolean) => void;
     onUpdate: (link: Link) => void;
 }
 
-function SortableLinkItem({ link, onDelete, onToggle, onUpdate }: SortableLinkItemProps) {
+function SortableLinkItem({ link, onDelete, onToggle, onToggleFeatured, onUpdate }: SortableLinkItemProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState({ title: link.title, url: link.url });
 
@@ -330,7 +360,9 @@ function SortableLinkItem({ link, onDelete, onToggle, onUpdate }: SortableLinkIt
         <div
             ref={setNodeRef}
             style={style}
-            className={`group bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex items-center gap-4 hover:shadow-md hover:border-violet-500/50 transition-all duration-300 ${!link.isActive ? 'opacity-60 bg-gray-50 dark:bg-gray-900/50' : ''}`}
+            className={`group bg-white dark:bg-gray-900 border rounded-xl p-4 flex items-center gap-4 hover:shadow-md hover:border-violet-500/50 transition-all duration-300 ${
+                link.isFeatured ? 'border-amber-400 dark:border-amber-500 ring-1 ring-amber-400/40' : 'border-gray-200 dark:border-gray-800'
+            } ${!link.isActive ? 'opacity-60 bg-gray-50 dark:bg-gray-900/50' : ''}`}
         >
             {/* Drag Handle */}
             <button
@@ -403,6 +435,21 @@ function SortableLinkItem({ link, onDelete, onToggle, onUpdate }: SortableLinkIt
 
             {/* Actions */}
             <div className="flex items-center gap-1">
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleFeatured(link.id, !link.isFeatured);
+                    }}
+                    className={`p-2 rounded-lg transition-colors ${
+                        link.isFeatured
+                            ? 'text-amber-500 hover:text-amber-600 bg-amber-50 dark:bg-amber-900/20'
+                            : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                    }`}
+                    title={link.isFeatured ? 'Remove from featured' : 'Feature this link'}
+                >
+                    <Star className={`w-4 h-4 ${link.isFeatured ? 'fill-current' : ''}`} />
+                </button>
                 <button
                     type="button"
                     onClick={(e) => {

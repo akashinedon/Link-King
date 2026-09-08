@@ -61,6 +61,7 @@ export default function ProfileLinks({ links }: Props) {
                                 url: link.url,
                                 title: link.title
                             }}
+                            isFeatured={link.isFeatured}
                             icon={
                                 isCustomIcon && link.icon ? (
                                     <Image

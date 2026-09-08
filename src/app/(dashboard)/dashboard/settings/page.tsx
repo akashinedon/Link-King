@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useUser, useClerk } from '@clerk/nextjs';
 import { Loader2, AlertTriangle, Copy, Check } from 'lucide-react';
 import { useToast } from '@/components/ui/toaster';
+import QrCodeCard from '@/components/dashboard/qr-code-card';
 
 export default function SettingsPage() {
     const { user } = useUser();
@@ -193,6 +194,13 @@ export default function SettingsPage() {
                     </div>
                 )}
             </div>
+
+            {/* QR Code */}
+            {profileUrl && (
+                <div className="mb-6">
+                    <QrCodeCard url={profileUrl} />
+                </div>
+            )}
 
             {/* Account Section */}
             <div className="card p-6 mb-6">
