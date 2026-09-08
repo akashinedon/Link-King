@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { CldUploadButton } from 'next-cloudinary';
 import { useToast } from '@/components/ui/toaster';
 import ProfilePreview from '@/components/dashboard/profile-preview';
+import BioAssistant from '@/components/dashboard/bio-assistant';
 
 const THEMES = [
     { id: 'default', name: 'Clean', preview: 'bg-gradient-to-br from-gray-100 to-gray-200' },
@@ -216,6 +217,7 @@ export default function AppearancePage() {
                                 <p className="text-xs text-gray-500 mt-1">
                                     {profile.bio.length}/200 characters
                                 </p>
+                                <BioAssistant onApply={(bio) => setProfile({ ...profile, bio: bio.slice(0, 200) })} />
                             </div>
                         </div>
                     </div>

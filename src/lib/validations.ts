@@ -63,6 +63,7 @@ export const profileUpdateSchema = z.object({
     avatar: z.string().trim().url().optional().nullable().or(z.literal('')),
     theme: z.enum(['default', 'dark', 'gradient', 'glass', 'neon', 'minimal']).optional(),
     username: usernameSchema.optional(),
+    showOnLeaderboard: z.boolean().optional(),
 });
 
 /** Formats the first Zod issue into a short, user-facing message. */

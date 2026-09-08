@@ -8,6 +8,7 @@ import LinkButton from '@/components/link-button';
 import ProfileLinks from '@/components/public-profile/profile-links';
 import PromoFooter from '@/components/public-profile/promo-footer';
 import ShareButton from '@/components/public-profile/share-button';
+import LiveActivityBadge from '@/components/public-profile/live-activity-badge';
 import { getClientIp, isRateLimited } from '@/lib/rate-limit';
 import { getCountryFromHeaders } from '@/lib/geo';
 
@@ -112,11 +113,12 @@ export default async function ProfilePage({ params }: Props) {
                         </p>
                     )}
 
-                    <div className="mt-4 flex justify-center">
+                    <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                         <ShareButton
                             title={`${user.name || user.username} | MiniLink`}
                             text={user.bio || `Check out ${user.name || user.username}'s links`}
                         />
+                        {user.username && <LiveActivityBadge username={user.username} />}
                     </div>
                 </div>
 

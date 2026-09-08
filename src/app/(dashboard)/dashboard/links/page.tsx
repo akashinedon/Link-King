@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
     Plus,
     GripVertical,
@@ -33,6 +34,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import IconPicker, { getIconComponent } from '@/components/dashboard/icon-picker';
 import { detectPlatformFromUrl } from '@/lib/platform-icon';
+import { suggestLinkTitle } from '@/lib/link-copy';
 
 interface Link {
     id: string;
@@ -50,6 +52,18 @@ export default function LinksPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [newLink, setNewLink] = useState({ title: '', url: '', icon: '' });
+    const [suggestedTitle, setSuggestedTitle] = useState<string | null>(null);
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    // Lets the command palette's "Add a new link" action jump straight here
+    // with the form already open, via /dashboard/links?new=1.
+    useEffect(() => {
+        if (searchParams.get('new') === '1') {
+            setIsAdding(true);
+            router.replace('/dashboard/links');
+        }
+    }, [searchParams, router]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -93,6 +107,7 @@ export default function LinksPage() {
                 const link = await res.json();
                 setLinks([...links, link]);
                 setNewLink({ title: '', url: '', icon: '' });
+                setSuggestedTitle(null);
                 setIsAdding(false);
             }
         } catch (error) {
@@ -211,6 +226,18 @@ export default function LinksPage() {
                                     onChange={(e) => setNewLink({ ...newLink, title: e.target.value })}
                                     required
                                 />
+                                {suggestedTitle && !newLink.title && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setNewLink({ ...newLink, title: suggestedTitle });
+                                            setSuggestedTitle(null);
+                                        }}
+                                        className="mt-1.5 text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                                    >
+                                        Use suggestion: &quot;{suggestedTitle}&quot;
+                                    </button>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-2">URL</label>
@@ -229,6 +256,7 @@ export default function LinksPage() {
                                             url,
                                             ...(detected && { icon: detected }),
                                         });
+                                        setSuggestedTitle(detected ? suggestLinkTitle(detected) : null);
                                     }}
                                     required
                                 />
@@ -246,6 +274,7 @@ export default function LinksPage() {
                                 onClick={() => {
                                     setIsAdding(false);
                                     setNewLink({ title: '', url: '', icon: '' });
+                                    setSuggestedTitle(null);
                                 }}
                                 className="btn-ghost"
                             >

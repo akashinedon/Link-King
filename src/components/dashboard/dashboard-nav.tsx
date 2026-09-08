@@ -14,9 +14,11 @@ import {
     X,
     ExternalLink,
     Sun,
-    Moon
+    Moon,
+    Search
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import CommandPalette from '@/components/dashboard/command-palette';
 
 interface DashboardNavProps {
     user: {
@@ -31,6 +33,7 @@ export default function DashboardNav({ user }: DashboardNavProps) {
     const pathname = usePathname();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isDark, setIsDark] = useState(false);
+    const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
     useEffect(() => {
         // Check system preference and current class
@@ -45,6 +48,18 @@ export default function DashboardNav({ user }: DashboardNavProps) {
             setIsDark(false);
             document.documentElement.classList.remove('dark');
         }
+    }, []);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                setIsPaletteOpen((prev) => !prev);
+            }
+            if (e.key === 'Escape') setIsPaletteOpen(false);
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
     }, []);
 
     const toggleTheme = () => {
@@ -108,6 +123,18 @@ export default function DashboardNav({ user }: DashboardNavProps) {
 
                     {/* Right side */}
                     <div className="flex items-center gap-3">
+                        {/* Command Palette trigger */}
+                        <button
+                            onClick={() => setIsPaletteOpen(true)}
+                            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800 transition-colors"
+                        >
+                            <Search className="w-3.5 h-3.5" />
+                            <span className="hidden lg:inline">Quick actions</span>
+                            <kbd className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-700">
+                                ⌘K
+                            </kbd>
+                        </button>
+
                         {/* Theme Toggle */}
                         <button
                             onClick={toggleTheme}
@@ -198,6 +225,14 @@ export default function DashboardNav({ user }: DashboardNavProps) {
                     </div>
                 </div>
             )}
+
+            <CommandPalette
+                open={isPaletteOpen}
+                onOpenChange={setIsPaletteOpen}
+                username={user.username}
+                isDark={isDark}
+                onToggleTheme={toggleTheme}
+            />
         </>
     );
 }

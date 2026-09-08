@@ -22,6 +22,7 @@ export async function GET() {
                 bio: true,
                 avatar: true,
                 theme: true,
+                showOnLeaderboard: true,
             },
         });
 
@@ -51,6 +52,7 @@ export async function GET() {
                         bio: true,
                         avatar: true,
                         theme: true,
+                        showOnLeaderboard: true,
                     },
                 });
             }
@@ -78,7 +80,7 @@ export async function PUT(request: NextRequest) {
             return NextResponse.json({ error: firstZodError(parsed.error) }, { status: 400 });
         }
 
-        const { name, bio, avatar, theme, username } = parsed.data;
+        const { name, bio, avatar, theme, username, showOnLeaderboard } = parsed.data;
 
         // If username is being changed, check uniqueness
         if (username) {
@@ -105,6 +107,7 @@ export async function PUT(request: NextRequest) {
                 ...(avatar !== undefined && { avatar }),
                 ...(theme !== undefined && { theme }),
                 ...(username !== undefined && { username }),
+                ...(showOnLeaderboard !== undefined && { showOnLeaderboard }),
             },
         });
 

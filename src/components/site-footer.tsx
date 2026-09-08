@@ -13,6 +13,12 @@ export function SiteFooter() {
                             </div>
                         </div>
                         <span className="font-semibold text-gray-900 dark:text-white">MiniLink</span>
+                        <Link
+                            href="/leaderboard"
+                            className="text-sm font-medium text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+                        >
+                            Trending
+                        </Link>
                     </div>
 
                     <p className="text-gray-600 dark:text-gray-400 text-sm">

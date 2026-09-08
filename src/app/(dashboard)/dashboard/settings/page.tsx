@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useClerk } from '@clerk/nextjs';
-import { Loader2, AlertTriangle, Copy, Check } from 'lucide-react';
+import { Loader2, AlertTriangle, Copy, Check, Trophy } from 'lucide-react';
 import { useToast } from '@/components/ui/toaster';
 import QrCodeCard from '@/components/dashboard/qr-code-card';
 
@@ -18,6 +18,8 @@ export default function SettingsPage() {
     const [username, setUsername] = useState('');
     const [originalUsername, setOriginalUsername] = useState('');
     const [error, setError] = useState('');
+    const [showOnLeaderboard, setShowOnLeaderboard] = useState(true);
+    const [isSavingLeaderboard, setIsSavingLeaderboard] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -31,10 +33,29 @@ export default function SettingsPage() {
             const data = await res.json();
             setUsername(data.username || '');
             setOriginalUsername(data.username || '');
+            setShowOnLeaderboard(data.showOnLeaderboard ?? true);
         } catch (error) {
             console.error('Failed to fetch profile:', error);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleToggleLeaderboard = async () => {
+        const next = !showOnLeaderboard;
+        setShowOnLeaderboard(next);
+        setIsSavingLeaderboard(true);
+        try {
+            await fetch('/api/user/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ showOnLeaderboard: next }),
+            });
+        } catch (error) {
+            console.error('Failed to update leaderboard preference:', error);
+            setShowOnLeaderboard(!next);
+        } finally {
+            setIsSavingLeaderboard(false);
         }
     };
 
@@ -211,6 +232,38 @@ export default function SettingsPage() {
                         <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
                         <p className="text-gray-900 dark:text-white">{user?.emailAddresses[0]?.emailAddress}</p>
                     </div>
+                </div>
+            </div>
+
+            {/* Privacy Section */}
+            <div className="card p-6 mb-6">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Trophy className="w-4 h-4" />
+                    Privacy
+                </h2>
+
+                <div className="flex items-center justify-between gap-4">
+                    <div>
+                        <p className="font-medium">Show on the public leaderboard</p>
+                        <p className="text-sm text-gray-500">
+                            Trending profiles are ranked by view count. Turn this off to keep your stats private.
+                        </p>
+                    </div>
+                    <button
+                        onClick={handleToggleLeaderboard}
+                        disabled={isSavingLeaderboard}
+                        role="switch"
+                        aria-checked={showOnLeaderboard}
+                        className={`relative shrink-0 w-11 h-6 rounded-full transition-colors disabled:opacity-50 ${
+                            showOnLeaderboard ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-700'
+                        }`}
+                    >
+                        <span
+                            className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                                showOnLeaderboard ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                        />
+                    </button>
                 </div>
             </div>
 
